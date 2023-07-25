@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:american-flights-api="http://www.mulesoft.org/schema/mule/american-flights-api" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/american-flights-api http://www.mulesoft.org/schema/mule/american-flights-api/current/mule-american-flights-api.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="american_flow" doc:id="9cbb91af-bb56-4f42-8c34-45b2e4db00ed" >
+		<http:listener doc:name="Listener" doc:id="62d2013a-6c21-4c64-a9da-dd7697d7a05a" config-ref="HTTP_Listener_config" path="/american/sys"/>
+		<american-flights-api:get-flights doc:name="Get flights" doc:id="35fb0d6f-136e-4ecf-8612-6ccce2c73c3e" config-ref="American_Flights_API_Config" client-id="${american.client_id}" client-secret="${american.client_secret}" destination="#[attributes.queryParams.code]"/>
+		<ee:transform doc:name="Transform Message" doc:id="493a8cd5-f690-45a3-945b-dd688cbe93e0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[payload map ( payload01 , indexOfPayload01 ) -> {
+    flight:"american",
+    availableSeats: payload01.emptySeats,
+    ID: payload01.ID,
+    price: (payload01.price),
+    departuredate: payload01.departureDate,
+    origination: payload01.origin,
+    destination:payload01.destination,
+    plane:payload01.plane."type",
+}
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="cc610616-c50a-48f2-82a0-db6424f66d3c" message="#[payload]"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="68d94005-0e60-4a02-b180-9a54ce20016c" type="AMERICAN-FLIGHTS-API:CONNECTIVITY">
+				<ee:transform doc:name="Transform Message" doc:id="6da7fbdb-1d4a-45a2-88e2-f91f5353463d" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"message": "success"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f56128fc-9ea8-4eb1-95f9-bc1f6fb11f65" >
+				<set-payload value="success" doc:name="Set Payload" doc:id="1fc65a19-27d0-4769-9eb3-9d3d9cb16205" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
